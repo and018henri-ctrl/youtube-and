@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeuTube - Versão Online</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        :root {
+            --yt-bg: #0f0f0f;
+            --yt-surface: #212121;
+            --yt-surface-hover: #3d3d3d;
+            --yt-border: #3f3f3f;
+            --yt-text: #f1f1f1;
+            --yt-text-secondary: #aaaaaa;
+            --yt-blue: #3ea6ff;
+            --yt-red: #ff0000;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--yt-bg);
+            color: var(--yt-text);
+            overflow-x: hidden;
+            height: 100vh;
+            transition: background-color 0.3s;
+        }
+
+        .hidden { display: none !important; }
+
+        /* HEADER */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+            padding: 0 16px;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background-color: var(--yt-bg);
+            z-index: 1000;
+            transition: background-color 0.3s;
+        }
+
+        .header-left, .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .menu-btn, .icon-btn {
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .menu-btn:hover, .icon-btn:hover { background-color: var(--yt-surface-hover); }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .icon-logo { color: var(--yt-red); font-size: 24px; transition: color 0.3s; }
+        .logo-text { font-size: 20px; font-weight: 700; letter-spacing: -1px; transition: color 0.3s; }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+            max-width: 720px;
+            margin: 0 40px;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 12px;
+        }
+
+        .search-bar {
+            display: flex;
+            flex-grow: 1;
+            border: 1px solid var(--yt-border);
+            border-radius: 40px;
+            background-color: #121212;
+            overflow: hidden;
+        }
+
+        .search-bar input {
+            background: transparent;
+            border: none;
+            color: var(--yt-text);
+            padding: 2px 16px;
+            font-size: 16px;
+            width: 100%;
+            outline: none;
+        }
+
+        .search-btn {
+            width: 64px;
+            background-color: var(--yt-surface);
+            border-left: 1px solid var(--yt-border);
+            color: var(--yt-text-secondary);
+            cursor: pointer;
+        }
+
+        .mic-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--yt-surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .login-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--yt-border);
+            border-radius: 18px;
+            padding: 6px 12px;
+            color: var(--yt-blue);
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .profile-pic { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+
+        /* BODY LAYOUT */
+        .app-body { display: flex; padding-top: 56px; }
+
+        .sidebar {
+            width: 240px;
+            background-color: var(--yt-bg);
+            position: fixed;
+            top: 56px;
+            bottom: 0;
+            left: 0;
+            overflow-y: auto;
+            transition: width 0.2s, background-color 0.3s;
+            z-index: 900;
+        }
+
+        .sidebar.collapsed { width: 72px; }
+        .sidebar.collapsed .nav-item span { display: none; }
+
+        .nav-links { padding: 12px; display: flex; flex-direction: column; }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--yt-text);
+            text-decoration: none;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover, .nav-item.active { background-color: var(--yt-surface); }
+        .nav-item i { width: 24px; font-size: 20px; margin-right: 20px; display: flex; justify-content: center; }
+
+        .main-content {
+            flex-grow: 1;
+            margin-left: 240px;
+            transition: margin-left 0.2s;
+            min-height: calc(100vh - 56px);
+        }
+
+        body.sidebar-collapsed .main-content { margin-left: 72px; }
+
+        /* FILTERS */
+        .filter-chips {
+            display: flex;
+            gap: 12px;
+            padding: 12px 24px;
+            position: sticky;
+            top: 56px;
+            background-color: var(--yt-bg);
+            z-index: 800;
+            overflow-x: auto;
+            transition: background-color 0.3s;
+        }
+
+        .chip {
+            padding: 6px 12px;
+            background-color: var(--yt-surface);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            cursor: pointer;
+            border: none;
+            color: var(--yt-text);
+        }
+
+        .chip.active { background-color: var(--yt-text); color: var(--yt-bg); }
+
+        /* VIDEO GRID (PADRÃO) */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            padding: 24px;
+        }
+
+        .video-card { display: flex; flex-direction: column; cursor: pointer; margin-bottom: 20px; transition: transform 0.2s; }
+        .thumbnail-container {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #333;
+        }
+        .thumbnail-container img { width: 100%; height: 100%; object-fit: cover; }
+        .video-info-row { display: flex; gap: 12px; margin-top: 12px; }
+        .channel-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #555; flex-shrink: 0; }
+        .video-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; }
+        .channel-name { font-size: 14px; color: var(--yt-text-secondary); }
+
+        /* =========================================
+           YT MUSIC MODE STYLES
+           ========================================= */
+        body.music-mode {
+            --yt-bg: #030303; /* Fundo mais escuro estilo YT Music */
+            --yt-surface: #1a1a1a;
+            --yt-surface-hover: #2a2a2a;
+        }
+
+        body.music-mode .icon-logo { color: #fff; } /* Ícone branco no Music */
+        body.music-mode .logo-text { font-family: 'Roboto', sans-serif; letter-spacing: -0.5px; }
+
+        /* Estilos da Biblioteca Musical (Playlist View) */
+        .music-library-container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            width: 100%;
+        }
+
+        /* Hero Section (Capa da Playlist e Detalhes) */
+        .music-hero {
+            display: flex;
+            gap: 32px;
+            align-items: flex-end;
+            margin-bottom: 32px;
+        }
+        
+        .music-hero-img {
+            width: 260px;
+            height: 260px;
+            border-radius: 8px;
+            object-fit: cover;
+            box-shadow: 0 4px 60px rgba(0,0,0,0.5);
+        }
+
+        .music-hero-info h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 8px 0 16px;
+            line-height: 1.1;
+        }
+
+        .music-play-btn {
+            background-color: #fff;
+            color: #000;
+            border-radius: 24px;
+            padding: 0 24px;
+            height: 48px;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.1s;
+        }
+        
+        .music-play-btn:active { transform: scale(0.95); }
+
+        /* Lista de Faixas */
+        .music-track-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .music-track {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 4px;
+            gap: 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .music-track:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .music-track-num {
+            width: 24px;
+            text-align: right;
+            color: var(--yt-text-secondary);
+            font-size: 14px;
+            position: relative;
+        }
+
+        .music-track:hover .music-track-num span { display: none; }
+        
+        .music-track:hover .music-track-num::before {
+            content: '\f04b'; /* Ícone de Play (FontAwesome) */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #fff;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .music-track-thumb {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+
+        .music-track-title {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            padding-right: 16px;
+        }
+
+        .music-track-artist {
+            flex: 1;
+            font-size: 14px;
+            color: var(--yt-text-secondary);
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+            .music-hero { flex-direction: column; align-items: center; text-align: center; }
+            .music-hero-info h1 { font-size: 32px; }
+            .music-track-title { flex: 2; }
+            .music-track-artist { flex: 1; }
+        }
+
+        /* Título Exclusivo para o Modo Música */
+        .music-header-title { display: none; }
+
+
+        /* WATCH SECTION */
+        .watch-section { padding: 24px; }
+        .watch-layout { display: flex; gap: 24px; max-width: 1600px; margin: 0 auto; }
+        .player-column { flex: 1; min-width: 0; transition: max-width 0.3s; }
+        .player-wrapper { aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; }
+        .player-wrapper iframe { width: 100%; height: 100%; border: none; }
+        .video-details h2 { margin: 16px 0 8px; font-size: 20px; }
+        .video-details p { background: var(--yt-surface); padding: 16px; border-radius: 12px; margin-top: 16px; font-size: 14px; white-space: pre-line; }
+        
+        .suggestions-column { width: 400px; }
+        .suggestion-card { display: flex; gap: 8px; margin-bottom: 12px; cursor: pointer; }
+        .suggestion-card img { width: 160px; aspect-ratio: 16/9; border-radius: 8px; object-fit: cover; }
+
+        /* MODIFICAÇÃO DO PLAYER NO MODO MÚSICA (Tela Limpa e Centralizada) */
+        body.music-mode .watch-layout { justify-content: center; }
+        body.music-mode .suggestions-column { display: none; }
+        body.music-mode .player-column { max-width: 800px; margin: 0 auto; }
+
+
+        /* VOICE SEARCH */
+        .voice-search-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .voice-search-content {
+            background: var(--yt-surface);
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            width: 400px;
+        }
+        .mic-active-btn {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: var(--yt-red); color: white;
+            font-size: 32px; border: none; margin-top: 20px;
+        }
+
+        /* UTILS */
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #333;
+            border-top-color: white; border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 50px auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 1000px) {
+            .watch-layout { flex-direction: column; }
+            .suggestions-column { width: 100%; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: 0; }
+            .main-content { margin-left: 0 !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <button class="menu-btn" id="menuBtn"><i class="fa-solid fa-bars"></i></button>
+            <div class="logo" id="logoBtn">
+                <i class="fa-brands fa-youtube icon-logo" id="logoIcon"></i>
+                <span class="logo-text" id="logoText">MeuTube</span>
+            </div>
+        </div>
+
+        <div class="header-center">
+            <div class="search-container">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Pesquisar">
+                    <button class="search-btn" id="searchButton"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+                <button class="mic-btn" id="micBtn"><i class="fa-solid fa-microphone"></i></button>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <button class="icon-btn"><i class="fa-solid fa-video"></i></button>
+            <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+            <button id="loginBtn" class="login-btn">
+                <i class="fa-regular fa-circle-user"></i>
+                <span id="loginText">Fazer Login</span>
+            </button>
+            <img id="userAvatar" class="profile-pic hidden" alt="Avatar">
+        </div>
+    </header>
+
+    <div class="app-body">
+        <aside class="sidebar" id="sidebar">
+            <nav class="nav-links">
+                <a href="#" class="nav-item active" id="navHome">
+                    <i class="fa-solid fa-house"></i><span>Início</span>
+                </a>
+                <a href="#" class="nav-item" data-query="#shorts">
+                    <i class="fa-solid fa-bolt"></i><span>Shorts</span>
+                </a>
+                <a href="#" class="nav-item" id="navSubscriptions">
+                    <i class="fa-brands fa-youtube"></i><span>Inscrições</span>
+                </a>
+                <hr style="border:0; border-top:1px solid var(--yt-border); margin:12px 0;">
+                
+                <!-- Nova Aba do YouTube Music -->
+                <a href="#" class="nav-item" id="navMusic">
+                    <i class="fa-solid fa-music"></i><span>Música</span>
+                </a>
+
+                <a href="#" class="nav-item" data-query="games gameplay">
+                    <i class="fa-solid fa-gamepad"></i><span>Jogos</span>
+                </a>
+                <a href="#" class="nav-item" data-query="esportes">
+                    <i class="fa-solid fa-trophy"></i><span>Esportes</span>
+                </a>
+                <a href="#" class="nav-item" id="navHistory">
+                    <i class="fa-solid fa-clock-rotate-left"></i><span>Histórico (Curtidos)</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="filter-chips" id="filterChips">
+                <button class="chip active" onclick="loadHome()">Tudo</button>
+                <button class="chip" onclick="fetchVideos('guia de viagem exterior')">Viagens</button>
+                <button class="chip" onclick="fetchVideos('comédia stand up')">Comédia</button>
+                <button class="chip" onclick="fetchVideos('programação web')">Programação</button>
+                <button class="chip" onclick="fetchVideos('tecnologia inovação')">Tecnologia</button>
+            </div>
+
+            <div id="loadingIndicator" class="hidden"><div class="spinner"></div></div>
+            
+            <section class="video-grid" id="homeGrid"></section>
+
+            <section class="watch-section hidden" id="watchSection">
+                <div class="watch-layout">
+                    <div class="player-column">
+                        <div class="player-wrapper" id="playerWrapper"></div>
+                        <div class="video-details" id="currentVideoInfo"></div>
+                    </div>
+                    <div class="suggestions-column">
+                        <h3>Recomendados</h3>
+                        <div class="suggestions-list" id="suggestionsList"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="voice-search-modal hidden" id="voiceSearchModal">
+        <div class="voice-search-content">
+            <h2 id="voiceStatusText">Ouvindo...</h2>
+            <button class="mic-active-btn"><i class="fa-solid fa-microphone"></i></button>
+            <button id="closeVoiceBtn" style="margin-top: 20px; background: none; border: 1px solid white; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer;">Fechar</button>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'AIzaSyBWXMOGPyH3O5BOAXlWaYf2mgwwoDd1sjc';
+        const CLIENT_ID = '6963743125-6icqrk4m0dpp0oh9ff3rkbpsa87lo03g.apps.googleusercontent.com';
+        const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly';
+
+        let accessToken = null;
+        let tokenClient;
+
+        const homeGrid = document.getElementById('homeGrid');
+        const watchSection = document.getElementById('watchSection');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const searchInput = document.getElementById('searchInput');
+
+        // Temas variados para a página inicial
+        const homeTopics = [
+            'guia de viagem internacional', 
+            'comédia stand up brasil', 
+            'programação web e tecnologia', 
+            'ciência e curiosidades', 
+            'vlog de viagens'
+        ];
+
+        function getRandomTopic() {
+            return homeTopics[Math.floor(Math.random() * homeTopics.length)];
+        }
+
+        // --- CONTROLE DO MODO MÚSICA ---
+        function toggleMusicMode(enable) {
+            const body = document.body;
+            const logoText = document.getElementById('logoText');
+            const logoIcon = document.getElementById('logoIcon');
+            const filterChips = document.getElementById('filterChips');
+
+            if (enable) {
+                body.classList.add('music-mode');
+                logoText.textContent = "MeuTube Music";
+                logoIcon.className = "fa-solid fa-music icon-logo";
+                filterChips.classList.add('hidden'); // Oculta os filtros padrões no Music
+                // Transforma o grid em bloco para o layout do Music
+                homeGrid.style.display = 'block';
+                homeGrid.style.padding = '0';
+            } else {
+                body.classList.remove('music-mode');
+                logoText.textContent = "MeuTube";
+                logoIcon.className = "fa-brands fa-youtube icon-logo";
+                // Restaura o grid padrão
+                homeGrid.style.display = '';
+                homeGrid.style.padding = '';
+
+                if (!watchSection.classList.contains('hidden')) {
+                    filterChips.classList.add('hidden');
+                } else {
+                    filterChips.classList.remove('hidden');
+                }
+            }
+        }
+
+        function loadHome() {
+            toggleMusicMode(false);
+            fetchVideos(getRandomTopic());
+        }
+
+        window.onload = () => {
+            loadHome();
+            initGoogleAuth();
+        };
+
+        function initGoogleAuth() {
+            if (typeof google !== 'undefined') {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: (tokenResponse) => {
+                        if (tokenResponse.access_token) {
+                            accessToken = tokenResponse.access_token;
+                            document.getElementById('loginText').textContent = "Logado";
+                            fetchUserProfile();
+                        }
+                    },
+                });
+            } else {
+                setTimeout(initGoogleAuth, 1000);
+            }
+        }
+
+        async function fetchVideos(query) {
+            showView('home');
+            homeGrid.innerHTML = '';
+            loadingIndicator.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=24&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`);
+                const data = await res.json();
+                loadingIndicator.classList.add('hidden');
+                if (data.items) {
+                    renderGrid(data.items);
+                    renderSuggestions(data.items);
+                }
+            } catch (err) {
+                console.error("Erro na busca:", err);
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        async function fetchAuthorizedData(endpoint) {
+            showView('home');
+            homeGrid.innerHTML = '';
+            loadingIndicator.classList.remove('hidden');
+
+            try {
+                let url = '';
+                if (endpoint === 'subscriptions') {
+                    url = `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=20`;
+                } else if (endpoint === 'history') {
+                    url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like&maxResults=24`;
+                }
+
+                const res = await fetch(url, {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                });
+                const data = await res.json();
+                loadingIndicator.classList.add('hidden');
+                
+                if (data.items) {
+                    let mappedItems = [];
+                    if (endpoint === 'history') {
+                        mappedItems = data.items.map(i => ({
+                            id: { videoId: i.id },
+                            snippet: i.snippet
+                        }));
+                    } else if (endpoint === 'subscriptions') {
+                        mappedItems = data.items.map(i => ({
+                            id: { videoId: i.snippet.resourceId.channelId },
+                            snippet: i.snippet,
+                            isChannel: true
+                        }));
+                    }
+                    renderGrid(mappedItems);
+                }
+            } catch (err) { console.error("Erro em dados privados:", err); }
+        }
+
+        // --- FETCH DA BIBLIOTECA MUSICAL ---
+        async function fetchMusicLibrary() {
+            toggleMusicMode(true);
+            showView('home');
+            homeGrid.innerHTML = '';
+            loadingIndicator.classList.remove('hidden');
+
+            if (!accessToken) {
+                loadingIndicator.classList.add('hidden');
+                tokenClient?.requestAccessToken({ prompt: '' });
+                return;
+            }
+
+            try {
+                // Busca os últimos 50 vídeos curtidos
+                const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like&maxResults=50`, {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                });
+                const data = await res.json();
+                loadingIndicator.classList.add('hidden');
+                
+                if (data.items) {
+                    // FILTRO CRUCIAL: Retém APENAS os vídeos onde categoryId é '10' (Categoria de Música do YouTube)
+                    const musicItems = data.items.filter(item => item.snippet.categoryId === '10');
+
+                    if (musicItems.length > 0) {
+                        const mappedItems = musicItems.map(i => ({
+                            id: { videoId: i.id },
+                            snippet: i.snippet
+                        }));
+                        renderMusicGrid(mappedItems);
+                    } else {
+                        homeGrid.innerHTML = '<p style="text-align:center; padding:40px; color:var(--yt-text-secondary);">Sua biblioteca musical está vazia ou não encontramos músicas curtidas recentemente.</p>';
+                    }
+                }
+            } catch (err) { 
+                console.error("Erro ao buscar músicas:", err); 
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        // --- RENDERIZAÇÃO ESPECÍFICA DO YOUTUBE MUSIC ---
+        function renderMusicGrid(videos) {
+            // Usa a capa do primeiro vídeo como capa da Playlist
+            const heroImg = videos.length > 0 ? (videos[0].snippet.thumbnails?.high?.url || videos[0].snippet.thumbnails?.medium?.url) : '';
+            const userName = document.getElementById('loginText').textContent === "Logado" ? "Você" : "Usuário";
+
+            let html = `
+                <div class="music-library-container">
+                    <div class="music-hero">
+                        <img src="${heroImg}" class="music-hero-img" onerror="this.src='https://via.placeholder.com/260x260?text=Música'">
+                        <div class="music-hero-info">
+                            <div style="font-size: 14px; color: var(--yt-text-secondary); font-weight: 500;">PLAYLIST</div>
+                            <h1>Músicas Curtidas</h1>
+                            <div style="font-size: 14px; color: var(--yt-text-secondary); margin-bottom: 24px;">
+                                ${userName} • ${videos.length} músicas
+                            </div>
+                            <button class="music-play-btn" onclick="document.querySelector('.music-track').click()">
+                                <i class="fa-solid fa-play"></i> Reproduzir Tudo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="music-track-list">
+            `;
+
+            videos.forEach((v, index) => {
+                const vidId = typeof v.id.videoId === 'string' ? v.id.videoId : '';
+                const thumbnail = v.snippet.thumbnails?.default?.url || '';
+                const title = esc(v.snippet.title);
+                const channel = esc(v.snippet.channelTitle);
+                const desc = esc(v.snippet.description);
+
+                html += `
+                    <div class="music-track" onclick="playVideo('${vidId}', '${title}', '${channel}', '${desc}')">
+                        <div class="music-track-num"><span>${index + 1}</span></div>
+                        <img src="${thumbnail}" class="music-track-thumb">
+                        <div class="music-track-title">${v.snippet.title}</div>
+                        <div class="music-track-artist">${v.snippet.channelTitle}</div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            homeGrid.innerHTML = html;
+        }
+
+        // --- RENDERIZAÇÃO PADRÃO (YOUTUBE NORMAL) ---
+        function renderGrid(videos) {
+            homeGrid.innerHTML = videos.map(v => {
+                const vidId = typeof v.id.videoId === 'string' ? v.id.videoId : '';
+                const thumbnail = v.snippet.thumbnails?.medium?.url || v.snippet.thumbnails?.default?.url || '';
+                
+                const clickAction = v.isChannel ? '' : `onclick="playVideo('${vidId}', '${esc(v.snippet.title)}', '${esc(v.snippet.channelTitle)}', '${esc(v.snippet.description)}')"`;
+                const cursorStyle = v.isChannel ? 'cursor: default;' : 'cursor: pointer;';
+
+                return `
+                <div class="video-card" ${clickAction} style="${cursorStyle}">
+                    <div class="thumbnail-container">
+                        <img src="${thumbnail}" loading="lazy">
+                    </div>
+                    <div class="video-info-row">
+                        <div class="channel-avatar"></div>
+                        <div class="video-text">
+                            <div class="video-title">${v.snippet.title}</div>
+                            <div class="channel-name">${v.snippet.channelTitle}</div>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function renderSuggestions(videos) {
+            document.getElementById('suggestionsList').innerHTML = videos.map(v => `
+                <div class="suggestion-card" onclick="playVideo('${v.id.videoId}', '${esc(v.snippet.title)}', '${esc(v.snippet.channelTitle)}', '${esc(v.snippet.description)}')">
+                    <img src="${v.snippet.thumbnails.default.url}">
+                    <div class="info">
+                        <div class="video-title" style="font-size:13px; -webkit-line-clamp: 2;">${v.snippet.title}</div>
+                        <div class="channel-name" style="font-size:11px;">${v.snippet.channelTitle}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function playVideo(id, title, channel, desc) {
+            showView('watch');
+            document.getElementById('playerWrapper').innerHTML = `
+                <iframe src="https://www.youtube.com/embed/${id}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            `;
+            document.getElementById('currentVideoInfo').innerHTML = `
+                <h2>${title}</h2>
+                <div class="channel-name" style="margin-top:10px;"><b>${channel}</b></div>
+                <p>${desc || 'Sem descrição.'}</p>
+            `;
+            window.scrollTo(0,0);
+        }
+
+        async function fetchUserProfile() {
+            try {
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                });
+                const user = await res.json();
+                if (user.picture) {
+                    document.getElementById('loginBtn').classList.add('hidden');
+                    const av = document.getElementById('userAvatar');
+                    av.src = user.picture;
+                    av.classList.remove('hidden');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Eventos de Interface
+        document.getElementById('searchButton').onclick = () => {
+            toggleMusicMode(false);
+            fetchVideos(searchInput.value);
+        };
+        searchInput.onkeypress = (e) => { 
+            if(e.key === 'Enter') {
+                toggleMusicMode(false);
+                fetchVideos(searchInput.value); 
+            }
+        };
+        
+        document.getElementById('loginBtn').onclick = () => tokenClient?.requestAccessToken({ prompt: '' });
+        document.getElementById('menuBtn').onclick = () => {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            document.body.classList.toggle('sidebar-collapsed');
+        };
+        
+        document.getElementById('logoBtn').onclick = loadHome;
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.onclick = (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                if (item.id === 'navHome') {
+                    loadHome();
+                } else if (item.id === 'navMusic') {
+                    fetchMusicLibrary();
+                } else if (item.id === 'navSubscriptions') {
+                    toggleMusicMode(false);
+                    if (accessToken) fetchAuthorizedData('subscriptions');
+                    else tokenClient?.requestAccessToken({ prompt: '' });
+                } else if (item.id === 'navHistory') {
+                    toggleMusicMode(false);
+                    if (accessToken) fetchAuthorizedData('history');
+                    else tokenClient?.requestAccessToken({ prompt: '' });
+                } else {
+                    toggleMusicMode(false);
+                    fetchVideos(item.dataset.query);
+                }
+            };
+        });
+
+        // Controle de Voz
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'pt-BR';
+        document.getElementById('micBtn').onclick = () => {
+            document.getElementById('voiceSearchModal').classList.remove('hidden');
+            recognition.start();
+        };
+        recognition.onresult = (e) => {
+            const res = e.results[0][0].transcript;
+            searchInput.value = res;
+            document.getElementById('voiceStatusText').textContent = `Buscando: ${res}`;
+            setTimeout(() => {
+                document.getElementById('voiceSearchModal').classList.add('hidden');
+                toggleMusicMode(false);
+                fetchVideos(res);
+            }, 1000);
+        };
+        document.getElementById('closeVoiceBtn').onclick = () => document.getElementById('voiceSearchModal').classList.add('hidden');
+
+        function showView(v) {
+            homeGrid.classList.toggle('hidden', v !== 'home');
+            
+            // Controle dos chips (se não for Music Mode)
+            if (document.body.classList.contains('music-mode')) {
+                document.getElementById('filterChips').classList.add('hidden');
+            } else {
+                document.getElementById('filterChips').classList.toggle('hidden', v !== 'home');
+            }
+            
+            watchSection.classList.toggle('hidden', v !== 'watch');
+        }
+
+        function esc(s) {
+            if (!s) return "";
+            return s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
