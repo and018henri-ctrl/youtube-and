@@ -8,7 +8,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
 
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -401,6 +401,12 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                 <a href="#" class="nav-item" id="navHistory">
                     <i class="fa-solid fa-clock-rotate-left"></i><span>Histórico (Curtidos)</span>
                 </a>
+                
+                <div id="subsSection" class="hidden">
+                    <hr style="border:0; border-top:1px solid var(--yt-border); margin:12px 0;">
+                    <h3 style="padding: 0 12px 8px; font-size: 16px; font-weight: 500;">Inscrições</h3>
+                    <div id="sidebarSubsList"></div>
+                </div>
             </nav>
         </aside>
 
@@ -566,12 +572,35 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
         }
 
         function loadHome() {
-            fetchVideos(getRandomTopic());
+            // Se estiver logado, mostra os vídeos mais populares do país (Home real)
+            // Caso contrário, usa os tópicos aleatórios
+            if (isTokenValid()) {
+                fetchPopularVideos();
+            } else {
+                fetchVideos(getRandomTopic());
+            }
+        }
+
+        async function fetchPopularVideos() {
+            showView('home');
+            homeGrid.innerHTML = '';
+            loadingIndicator.classList.remove('hidden');
+            try {
+                const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&chart=mostPopular&maxResults=24&regionCode=BR&key=${API_KEY}`);
+                const data = await res.json();
+                loadingIndicator.classList.add('hidden');
+                if (data.items) {
+                    renderGrid(data.items);
+                    renderSuggestions(data.items);
+                }
+            } catch (err) {
+                fetchVideos(getRandomTopic());
+            }
         }
 
         window.onload = () => {
-            loadHome();
             initGoogleAuth();
+            loadHome();
         };
 
         function initGoogleAuth() {
@@ -594,13 +623,17 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                                 window.pendingAuthAction();
                                 window.pendingAuthAction = null;
                             }
+                            
+                            // Ao logar ou renovar, carrega as inscrições no sidebar
+                            loadSidebarSubscriptions();
                         }
                     },
                 });
 
-                // Se temos token mas não puxamos a foto ainda, faz isso em segundo plano
-                if (isTokenValid() && !userProfile) {
-                    fetchUserProfile();
+                // LOGIN AUTOMÁTICO: Se o token é válido, puxa dados imediatamente
+                if (isTokenValid()) {
+                    if (!userProfile) fetchUserProfile();
+                    loadSidebarSubscriptions();
                 }
 
             } else {
@@ -627,6 +660,29 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
             }
         }
 
+        async function loadSidebarSubscriptions() {
+            const subsContainer = document.getElementById('subsSection');
+            const subsList = document.getElementById('sidebarSubsList');
+            if (!subsContainer || !subsList) return;
+
+            try {
+                const res = await fetchWithAuth(`https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50`);
+                const data = await res.json();
+                
+                if (data.items && data.items.length > 0) {
+                    subsContainer.classList.remove('hidden');
+                    subsList.innerHTML = data.items.map(s => `
+                        <a href="#" class="nav-item" onclick="fetchVideos('${s.snippet.title}')" style="padding: 8px 12px;">
+                            <img src="${s.snippet.thumbnails.default.url}" style="width:24px; height:24px; border-radius:50%; margin-right:20px;">
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(s.snippet.title)}</span>
+                        </a>
+                    `).join('');
+                }
+            } catch (err) {
+                console.warn("Não foi possível carregar inscrições laterais.");
+            }
+        }
+
         async function fetchAuthorizedData(endpoint) {
             showView('home');
             homeGrid.innerHTML = '';
@@ -635,7 +691,7 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
             try {
                 let url = '';
                 if (endpoint === 'subscriptions') {
-                    url = `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=20`;
+                    url = `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50`;
                 } else if (endpoint === 'history' || endpoint === 'music') {
                     // Puxa as curtidas em geral do YouTube
                     url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like&maxResults=50`;
