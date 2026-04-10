@@ -555,15 +555,21 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
         });
 
         // Autenticador sob demanda: Renova o token de forma silenciosa e invisível
+        // Garante que o vínculo com o e-mail seja mantido em todas as abas
         function requireAuth(actionFunction) {
             if (isTokenValid()) {
                 actionFunction();
             } else if (userProfile) {
-                // Se já logou uma vez, renovamos sem perguntar nada
+                // LOGIN ÚNICO: Se o perfil existe, renova silenciosamente sem abrir popups
                 window.pendingAuthAction = actionFunction;
-                tokenClient?.requestAccessToken({ prompt: '' });
+                try {
+                    tokenClient?.requestAccessToken({ prompt: '' });
+                } catch (e) {
+                    // Fallback apenas se a renovação silenciosa falhar criticamente
+                    tokenClient?.requestAccessToken({ prompt: 'select_account' });
+                }
             } else {
-                // Primeira vez absoluta: pede login
+                // Primeira vez absoluta: o usuário clica para vincular a conta
                 window.pendingAuthAction = actionFunction;
                 tokenClient?.requestAccessToken({ prompt: 'select_account' });
             }
@@ -594,13 +600,12 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
         }
 
         function loadHome() {
-            // Se temos um perfil salvo mas o token expirou, o initGoogleAuth vai renovar.
-            // Se o token está válido, carregamos o feed personalizado.
+            // Unifica o estado logado: se o usuário "existe", a Home deve ser dele
             if (isTokenValid()) {
                 fetchPersonalizedHome();
             } else if (userProfile) {
-                // Aguarda renovação silenciosa
-                loadingIndicator.classList.remove('hidden');
+                // Se o login expirou mas ele já logou uma vez, renovamos antes de carregar a Home
+                requireAuth(() => fetchPersonalizedHome());
             } else {
                 fetchVideos(getRandomTopic());
             }
@@ -684,23 +689,27 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
         async function fetchVideos(query) {
             showView('home');
             homeGrid.innerHTML = '';
-            homeGrid.className = (query === '#shorts' || query === 'shorts') ? 'shorts-grid' : 'video-grid';
+            const isShorts = (query === '#shorts' || query === 'shorts');
+            homeGrid.className = isShorts ? 'shorts-grid' : 'video-grid';
             loadingIndicator.classList.remove('hidden');
 
             try {
                 let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=24&type=video`;
                 
-                // Se for Shorts, forçamos a duração curta para o grid vertical
-                if (query === '#shorts' || query === 'shorts') {
+                if (isShorts) {
                     url += `&videoDuration=short&q=shorts`;
                 } else {
                     url += `&q=${encodeURIComponent(query)}`;
                 }
 
                 let res;
+                // Se o usuário já logou uma vez (userProfile existe), tentamos sempre a busca vinculada ao e-mail
                 if (isTokenValid()) {
-                    // Busca vinculada ao e-mail: traz o que o usuário gosta
                     res = await fetchWithAuth(url);
+                } else if (userProfile && isShorts) {
+                    // Para Shorts, se ele já logou uma vez, forçamos a renovação para carregar os shorts do e-mail dele
+                    requireAuth(() => fetchVideos(query));
+                    return;
                 } else {
                     res = await fetch(`${url}&key=${API_KEY}`);
                 }
@@ -949,6 +958,7 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                 document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
                 
+                // Sistema de navegação unificado por login único
                 if (item.id === 'navHome') {
                     loadHome();
                 } else if (item.id === 'navSubscriptions') {
@@ -958,8 +968,12 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                 } else if (item.id === 'navHistory') {
                     requireAuth(() => fetchAuthorizedData('history'));
                 } else if (item.dataset.query === '#shorts') {
-                    // Garante que Shorts usem o token do e-mail para personalização
-                    requireAuth(() => fetchVideos('shorts'));
+                    // Se ele já logou uma vez, a aba Shorts carrega automaticamente os shorts dele
+                    if (userProfile) {
+                        requireAuth(() => fetchVideos('shorts'));
+                    } else {
+                        fetchVideos('shorts');
+                    }
                 } else {
                     fetchVideos(item.dataset.query);
                 }
