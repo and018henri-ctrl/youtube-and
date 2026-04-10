@@ -647,16 +647,32 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
             loadingIndicator.classList.remove('hidden');
 
             try {
+                // Adicionamos um cabeçalho para evitar cache e garantir uma nova requisição limpa
                 const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=24&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`);
                 const data = await res.json();
+                
                 loadingIndicator.classList.add('hidden');
-                if (data.items) {
+
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                if (data.items && data.items.length > 0) {
                     renderGrid(data.items);
                     renderSuggestions(data.items);
+                } else {
+                    homeGrid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px;">
+                        <i class="fa-solid fa-circle-exclamation" style="font-size: 48px; color: var(--yt-text-secondary); margin-bottom: 16px;"></i>
+                        <p>Nenhum resultado encontrado para "${esc(query)}".</p>
+                    </div>`;
                 }
             } catch (err) {
                 console.error("Erro na busca:", err);
                 loadingIndicator.classList.add('hidden');
+                homeGrid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px; color: #ff4e4e;">
+                    <p>Erro na API (400/403): Limite de cota atingido ou Chave inválida.</p>
+                    <small style="color: var(--yt-text-secondary)">${err.message}</small>
+                </div>`;
             }
         }
 
@@ -899,32 +915,31 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
             const grid = document.getElementById('musicGrid');
             const recGrid = document.getElementById('musicGridRecommended');
             if (grid) grid.innerHTML = '<div class="spinner"></div>';
+            if (recGrid) recGrid.innerHTML = '';
             
-            // Construção da query otimizada para evitar Erro 400 e garantir apenas música
+            // Simplificamos a query: Removemos videoCategoryId=10 que causa Erro 400 em chaves restritas
             const baseQuery = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&type=video&q=`;
             
             try {
-                // Tentativa 1: Com Categoria de Música (Pode falhar em algumas chaves de API)
-                let res = await fetch(`${baseQuery}${encodeURIComponent(genre + " official music video")}&videoCategoryId=10&key=${API_KEY}`);
-                let data = await res.json();
+                // Chamada principal (Busca normal com sufixos de música para garantir relevância)
+                const res = await fetch(`${baseQuery}${encodeURIComponent(genre + " official music video")}&key=${API_KEY}`);
+                const data = await res.json();
                 
-                // Fallback: Se der erro 400 ou não vier itens, tenta sem o filtro rígido de categoria
-                if (!data.items || data.error) {
-                    res = await fetch(`${baseQuery}${encodeURIComponent(genre + " music audio")}&key=${API_KEY}`);
-                    data = await res.json();
-                }
+                if (data.error) throw new Error(data.error.message);
                 
-                if (data.items) {
+                if (data.items && data.items.length > 0) {
                     renderMusicGrid(data.items, 'musicGrid');
                     
-                    // Recomendações (Mix Automático)
+                    // Mix Recomendado (Gera uma segunda lista baseada na "vibe")
                     const resRec = await fetch(`${baseQuery}${encodeURIComponent("vibe " + genre)}&key=${API_KEY}&maxResults=6`);
                     const dataRec = await resRec.json();
                     if (dataRec.items) renderMusicGrid(dataRec.items, 'musicGridRecommended');
+                } else {
+                    grid.innerHTML = '<p style="color:gray; text-align:center; padding:20px;">Nenhuma música disponível no momento.</p>';
                 }
             } catch (err) {
-                console.error("Erro Crítico na Plataforma Music:", err);
-                if(grid) grid.innerHTML = '<p style="color:red; text-align:center;">Erro ao carregar a estação de rádio. Verifique a API Key.</p>';
+                console.error("Erro na Plataforma Music:", err);
+                if(grid) grid.innerHTML = `<p style="color:#ff4e4e; text-align:center; padding:20px;">Erro de conexão com o YouTube Music (400).<br><small>${err.message}</small></p>`;
             }
         }
 
@@ -966,7 +981,8 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
 
         function esc(s) {
             if (!s) return "";
-            return s.replace(/</g, "&lt;")
+            return s.replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
                     .replace(/>/g, "&gt;")
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#39;')
