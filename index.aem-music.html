@@ -236,6 +236,19 @@
             padding: 24px;
         }
 
+        /* SHORTS GRID */
+        .shorts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            padding: 24px;
+        }
+        .shorts-card { cursor: pointer; transition: transform 0.2s; }
+        .shorts-card:hover { transform: scale(1.02); }
+        .shorts-card .thumb { width: 100%; aspect-ratio: 9/16; border-radius: 12px; background: #333; overflow: hidden; }
+        .shorts-card img { width: 100%; height: 100%; object-fit: cover; }
+        .shorts-card .title { font-size: 14px; font-weight: 500; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
         .video-card { display: flex; flex-direction: column; cursor: pointer; margin-bottom: 20px; transition: transform 0.2s; }
         .thumbnail-container {
             width: 100%;
@@ -479,9 +492,11 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
     </div>
 
     <script>
-        const API_KEY = 'AIzaSyBWXMOGPyH3O5BOAXlWaYf2mgwwoDd1sjc';
+        // Nota: Substitua esta chave se o erro 400 persistir para utilizadores DESLOGADOS.
+        // Utilizadores LOGADOS usarão o token OAuth2 automaticamente agora.
+        let API_KEY = 'AIzaSyBWXMOGPyH3O5BOAXlWaYf2mgwwoDd1sjc';
         const CLIENT_ID = '6963743125-6icqrk4m0dpp0oh9ff3rkbpsa87lo03g.apps.googleusercontent.com';
-        const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly';
+        const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl';
 
         // --- SISTEMA DE LOGIN PERSISTENTE INTELIGENTE ---
         let accessToken = localStorage.getItem('yt_access_token');
@@ -644,22 +659,40 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
         async function fetchVideos(query) {
             showView('home');
             homeGrid.innerHTML = '';
+            homeGrid.className = query === '#shorts' ? 'shorts-grid' : 'video-grid';
             loadingIndicator.classList.remove('hidden');
 
             try {
-                // Adicionamos um cabeçalho para evitar cache e garantir uma nova requisição limpa
-                const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=24&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`);
+                let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=24&q=${encodeURIComponent(query)}&type=video`;
+                let headers = {};
+
+                // Se estiver logado, usa o token para evitar erro de API Key expirada
+                if (isTokenValid()) {
+                    headers = { 'Authorization': `Bearer ${accessToken}` };
+                } else {
+                    url += `&key=${API_KEY}`;
+                }
+
+                const res = await fetch(url, { headers });
                 const data = await res.json();
                 
                 loadingIndicator.classList.add('hidden');
 
                 if (data.error) {
+                    // Se o erro for de chave expirada e não estivermos logados, avisa o user
+                    if (data.error.code === 400 || data.error.code === 403) {
+                        throw new Error("A chave de API expirou. Por favor, faça LOGIN para continuar usando a plataforma sem interrupções.");
+                    }
                     throw new Error(data.error.message);
                 }
 
                 if (data.items && data.items.length > 0) {
-                    renderGrid(data.items);
-                    renderSuggestions(data.items);
+                    if (query === '#shorts') {
+                        renderShorts(data.items);
+                    } else {
+                        renderGrid(data.items);
+                        renderSuggestions(data.items);
+                    }
                 } else {
                     homeGrid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px;">
                         <i class="fa-solid fa-circle-exclamation" style="font-size: 48px; color: var(--yt-text-secondary); margin-bottom: 16px;"></i>
@@ -702,13 +735,32 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
         async function fetchAuthorizedData(endpoint) {
             showView('home');
             homeGrid.innerHTML = '';
+            homeGrid.className = 'video-grid';
             loadingIndicator.classList.remove('hidden');
 
             try {
-                let url = '';
                 if (endpoint === 'subscriptions') {
-                    url = `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50`;
-                } else if (endpoint === 'history' || endpoint === 'music') {
+                    // Primeiro pegamos os IDs dos canais inscritos
+                    const subRes = await fetchWithAuth(`https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=15`);
+                    const subData = await subRes.json();
+                    
+                    if (subData.items && subData.items.length > 0) {
+                        // Para cada canal, pegamos os vídeos mais recentes (simplificado para performance)
+                        const allVideos = [];
+                        for (const channel of subData.items) {
+                            const chanId = channel.snippet.resourceId.channelId;
+                            const vRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${chanId}&maxResults=3&order=date&type=video&key=${API_KEY}`);
+                            const vData = await vRes.json();
+                            if (vData.items) allVideos.push(...vData.items);
+                        }
+                        loadingIndicator.classList.add('hidden');
+                        renderGrid(allVideos.sort(() => Math.random() - 0.5)); // Mistura os vídeos das inscrições
+                        return;
+                    }
+                }
+
+                let url = '';
+                if (endpoint === 'history' || endpoint === 'music') {
                     // Puxa as curtidas em geral do YouTube
                     url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like&maxResults=50`;
                 }
@@ -741,6 +793,28 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                 console.error("Erro em dados privados:", err); 
                 loadingIndicator.classList.add('hidden');
             }
+        }
+
+        function renderShorts(videos) {
+            homeGrid.innerHTML = videos.map(v => {
+                const vidId = extractVideoId(v);
+                if (!vidId) return '';
+                
+                videoData[vidId] = {
+                    title: v.snippet.title,
+                    channel: v.snippet.channelTitle,
+                    desc: v.snippet.description
+                };
+
+                return `
+                    <div class="shorts-card playable-video" data-vid="${vidId}">
+                        <div class="thumb">
+                            <img src="https://i.ytimg.com/vi/${vidId}/hq720.jpg" onerror="this.src='${v.snippet.thumbnails.high.url}'">
+                        </div>
+                        <div class="title">${esc(v.snippet.title)}</div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function renderGrid(videos) {
