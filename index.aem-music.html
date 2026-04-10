@@ -590,29 +590,38 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
         }
 
         function loadHome() {
-            // Se estiver logado, tenta buscar vídeos populares primeiro (Home Real)
+            // Se temos um perfil salvo mas o token expirou, o initGoogleAuth vai renovar.
+            // Se o token está válido, carregamos o feed personalizado.
             if (isTokenValid()) {
-                fetchPopularVideos();
+                fetchPersonalizedHome();
+            } else if (userProfile) {
+                // Aguarda renovação silenciosa
+                loadingIndicator.classList.remove('hidden');
             } else {
                 fetchVideos(getRandomTopic());
             }
         }
 
-        async function fetchPopularVideos() {
+        async function fetchPersonalizedHome() {
             showView('home');
             homeGrid.innerHTML = '';
             homeGrid.className = 'video-grid';
             loadingIndicator.classList.remove('hidden');
             try {
-                // Tenta buscar os mais populares do país se estiver logado
-                const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&chart=mostPopular&maxResults=24&regionCode=BR&key=${API_KEY}`);
+                // Ao usar myRating=like ou buscar sem Q mas com Auth, o YouTube prioriza relevância do user
+                // Buscamos os vídeos mais populares personalizados para a região e histórico do user logado
+                const res = await fetchWithAuth(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&chart=mostPopular&maxResults=24&regionCode=BR`);
                 const data = await res.json();
+                
                 loadingIndicator.classList.add('hidden');
-                if (data.items) {
+                if (data.items && data.items.length > 0) {
                     renderGrid(data.items);
                     renderSuggestions(data.items);
+                } else {
+                    fetchVideos(getRandomTopic());
                 }
             } catch (err) {
+                console.error("Erro no feed personalizado:", err);
                 fetchVideos(getRandomTopic());
             }
         }
@@ -640,20 +649,27 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                             if (window.pendingAuthAction) {
                                 window.pendingAuthAction();
                                 window.pendingAuthAction = null;
+                            } else {
+                                // Se não havia ação pendente mas acabou de logar/renovar, atualiza a Home e Sidebar
+                                loadSidebarSubscriptions();
+                                loadHome();
                             }
-
-                            loadSidebarSubscriptions();
                         }
                     },
                 });
 
                 // PERSISTÊNCIA ABSOLUTA: 
-                // Se já tínhamos perfil mas o token expirou, renovamos silenciosamente no carregamento
-                if (userProfile && !isTokenValid()) {
-                    tokenClient.requestAccessToken({ prompt: '' });
-                } else if (isTokenValid()) {
-                    loadSidebarSubscriptions();
-                    if (!userProfile) fetchUserProfile();
+                // Se o usuário já logou uma vez, garantimos que os dados dele apareçam imediatamente
+                if (userProfile) {
+                    restoreUserUI();
+                    if (!isTokenValid()) {
+                        // Renova o token em background sem incomodar o user
+                        tokenClient.requestAccessToken({ prompt: '' });
+                    } else {
+                        loadSidebarSubscriptions();
+                        // Se o token está vivo, já carrega o feed do e-mail
+                        loadHome();
+                    }
                 }
 
             } else {
@@ -664,22 +680,22 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
         async function fetchVideos(query) {
             showView('home');
             homeGrid.innerHTML = '';
-            // Ajusta o grid para Shorts se necessário
             homeGrid.className = query === '#shorts' ? 'shorts-grid' : 'video-grid';
             loadingIndicator.classList.remove('hidden');
 
             try {
+                // Se for Shorts e estiver logado, tentamos buscar shorts que o usuário costuma ver
                 let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=24&q=${encodeURIComponent(query)}&type=video`;
-                let headers = {};
+                let res;
 
-                // CORREÇÃO ERRO 400: Se logado, usa Token para ignorar limites de API Key
                 if (isTokenValid()) {
-                    headers = { 'Authorization': `Bearer ${accessToken}` };
+                    // Busca autorizada: O YouTube retorna resultados baseados no interesse do e-mail logado
+                    res = await fetchWithAuth(url);
                 } else {
-                    url += `&key=${API_KEY}`;
+                    res = await fetch(`${url}&key=${API_KEY}`);
                 }
 
-                const res = await fetch(url, { headers });
+                const data = await res.json();
                 const data = await res.json();
                 loadingIndicator.classList.add('hidden');
 
