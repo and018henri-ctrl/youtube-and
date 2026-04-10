@@ -302,8 +302,10 @@
         }
 
         /* YOUTUBE MUSIC DESIGN SYSTEM */
-        .music-section { padding: 24px; min-height: 100vh; background: linear-gradient(180deg, #212121 0%, #0f0f0f 30%); }
-        .music-header { margin-bottom: 32px; }
+        .music-section { padding: 24px; min-height: 100vh; background: linear-gradient(180deg, #1d1d1d 0%, #030303 40%, #030303 100%); }
+        .music-section::-webkit-scrollbar { width: 8px; }
+        .music-section::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .music-header { margin-bottom: 32px; padding-top: 20px; }
         .music-header h1 { font-size: 42px; font-weight: 900; letter-spacing: -1px; margin-bottom: 16px; }
         .music-chips { display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; }
         .music-chip { padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
@@ -840,34 +842,47 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
             
             const grid = document.getElementById('musicGrid');
             const recGrid = document.getElementById('musicGridRecommended');
-            grid.innerHTML = '<div class="spinner"></div>';
+            if (grid) grid.innerHTML = '<div class="spinner"></div>';
+            
+            // Construção da query otimizada para evitar Erro 400 e garantir apenas música
+            const baseQuery = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&type=video&q=`;
             
             try {
-                // Fetch principal para a estante "Escolhas Rápidas"
-                const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&q=${encodeURIComponent(genre)}&type=video&videoCategoryId=10&key=${API_KEY}`);
-                const data = await res.json();
+                // Tentativa 1: Com Categoria de Música (Pode falhar em algumas chaves de API)
+                let res = await fetch(`${baseQuery}${encodeURIComponent(genre + " official music video")}&videoCategoryId=10&key=${API_KEY}`);
+                let data = await res.json();
+                
+                // Fallback: Se der erro 400 ou não vier itens, tenta sem o filtro rígido de categoria
+                if (!data.items || data.error) {
+                    res = await fetch(`${baseQuery}${encodeURIComponent(genre + " music audio")}&key=${API_KEY}`);
+                    data = await res.json();
+                }
                 
                 if (data.items) {
                     renderMusicGrid(data.items, 'musicGrid');
                     
-                    // Fetch secundário para a estante "Recomendados" com um tema diferente
-                    const resRec = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=6&q=music official video ${genre}&type=video&videoCategoryId=10&key=${API_KEY}`);
+                    // Recomendações (Mix Automático)
+                    const resRec = await fetch(`${baseQuery}${encodeURIComponent("vibe " + genre)}&key=${API_KEY}&maxResults=6`);
                     const dataRec = await resRec.json();
-                    renderMusicGrid(dataRec.items, 'musicGridRecommended');
+                    if (dataRec.items) renderMusicGrid(dataRec.items, 'musicGridRecommended');
                 }
             } catch (err) {
-                console.error("Erro na Plataforma Music:", err);
+                console.error("Erro Crítico na Plataforma Music:", err);
+                if(grid) grid.innerHTML = '<p style="color:red; text-align:center;">Erro ao carregar a estação de rádio. Verifique a API Key.</p>';
             }
         }
 
         function renderMusicGrid(songs, targetId = 'musicGrid') {
             const container = document.getElementById(targetId);
+            if (!container) return;
+            
             container.innerHTML = songs.map(s => {
                 const vidId = extractVideoId(s);
                 if (!vidId) return '';
                 
-                const thumb = s.snippet.thumbnails?.high?.url || s.snippet.thumbnails?.medium?.url || '';
+                const thumb = s.snippet.thumbnails?.maxres?.url || s.snippet.thumbnails?.high?.url || s.snippet.thumbnails?.medium?.url || '';
                 
+                // Registra os dados para o player global
                 videoData[vidId] = {
                     title: s.snippet.title,
                     channel: s.snippet.channelTitle,
@@ -875,11 +890,13 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                 };
 
                 return `
-                    <div class="music-card-ytm playable-video" data-vid="${vidId}">
+                    <div class="music-card-ytm playable-video" data-vid="${vidId}" title="${esc(s.snippet.title)}">
                         <div class="music-thumb-ytm">
-                            <img src="${thumb}" loading="lazy">
+                            <img src="${thumb}" loading="lazy" onerror="this.src='https://i.ytimg.com/vi/${vidId}/hqdefault.jpg'">
                             <div class="music-play-overlay">
-                                <i class="fa-solid fa-play"></i>
+                                <div style="background: rgba(0,0,0,0.6); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fa-solid fa-play" style="font-size: 20px; margin-left: 4px;"></i>
+                                </div>
                             </div>
                         </div>
                         <div class="music-info-ytm">
