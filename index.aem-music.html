@@ -417,18 +417,32 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
 
             <section class="music-section hidden" id="musicSection">
                 <div class="music-header">
-                    <div class="music-chips">
-                        <button class="music-chip active">Energia</button>
-                        <button class="music-chip">Relaxar</button>
-                        <button class="music-chip">Foco</button>
-                        <button class="music-chip">Treino</button>
-                        <button class="music-chip">Comutar</button>
+                    <div class="music-chips" id="musicFilterChips">
+                        <button class="music-chip active" onclick="fetchMusicByGenre('Top Hits Brasil 2024', this)">Energia</button>
+                        <button class="music-chip" onclick="fetchMusicByGenre('Relaxing Music Lofi', this)">Relaxar</button>
+                        <button class="music-chip" onclick="fetchMusicByGenre('Deep Focus Work', this)">Foco</button>
+                        <button class="music-chip" onclick="fetchMusicByGenre('Gym Motivation Music', this)">Treino</button>
+                        <button class="music-chip" onclick="fetchMusicByGenre('Chill Vibes', this)">Comutar</button>
                     </div>
-                    <h1>Suas Favoritas</h1>
+                    <h1 id="musicMainTitle">Sua Estação de Música</h1>
                 </div>
+                
                 <div class="music-shelf">
+                    <div class="music-shelf-title">
+                        <span>Escolhas Rápidas</span>
+                        <span style="font-size: 14px; color: var(--yt-text-secondary); cursor: pointer; font-weight: 500;">TOCAR TUDO</span>
+                    </div>
                     <div class="music-grid-ytm" id="musicGrid">
-                        <!-- Músicas do YT Music injetadas aqui -->
+                        <!-- Músicas injetadas aqui -->
+                    </div>
+                </div>
+
+                <div class="music-shelf" style="margin-top: 48px;">
+                    <div class="music-shelf-title">
+                        <span>Recomendados para você</span>
+                    </div>
+                    <div class="music-grid-ytm" id="musicGridRecommended">
+                        <!-- Recomendações injetadas aqui -->
                     </div>
                 </div>
             </section>
@@ -780,8 +794,8 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                 } else if (item.id === 'navSubscriptions') {
                     requireAuth(() => fetchAuthorizedData('subscriptions'));
                 } else if (item.id === 'navMusic') {
-                    // Chama os dados privados, filtrando apenas as músicas curtidas no seu histórico normal
-                    requireAuth(() => fetchAuthorizedData('music'));
+                    showView('music');
+                    fetchMusicByGenre('Pop Hits 2024');
                 } else if (item.id === 'navHistory') {
                     requireAuth(() => fetchAuthorizedData('history'));
                 } else {
@@ -818,9 +832,40 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
             document.body.style.backgroundColor = v === 'music' ? '#030303' : 'var(--yt-bg)';
         }
 
-        function renderMusicGrid(songs) {
-            document.getElementById('musicGrid').innerHTML = songs.map(s => {
+        async function fetchMusicByGenre(genre, element = null) {
+            if (element) {
+                document.querySelectorAll('.music-chip').forEach(c => c.classList.remove('active'));
+                element.classList.add('active');
+            }
+            
+            const grid = document.getElementById('musicGrid');
+            const recGrid = document.getElementById('musicGridRecommended');
+            grid.innerHTML = '<div class="spinner"></div>';
+            
+            try {
+                // Fetch principal para a estante "Escolhas Rápidas"
+                const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&q=${encodeURIComponent(genre)}&type=video&videoCategoryId=10&key=${API_KEY}`);
+                const data = await res.json();
+                
+                if (data.items) {
+                    renderMusicGrid(data.items, 'musicGrid');
+                    
+                    // Fetch secundário para a estante "Recomendados" com um tema diferente
+                    const resRec = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=6&q=music official video ${genre}&type=video&videoCategoryId=10&key=${API_KEY}`);
+                    const dataRec = await resRec.json();
+                    renderMusicGrid(dataRec.items, 'musicGridRecommended');
+                }
+            } catch (err) {
+                console.error("Erro na Plataforma Music:", err);
+            }
+        }
+
+        function renderMusicGrid(songs, targetId = 'musicGrid') {
+            const container = document.getElementById(targetId);
+            container.innerHTML = songs.map(s => {
                 const vidId = extractVideoId(s);
+                if (!vidId) return '';
+                
                 const thumb = s.snippet.thumbnails?.high?.url || s.snippet.thumbnails?.medium?.url || '';
                 
                 videoData[vidId] = {
