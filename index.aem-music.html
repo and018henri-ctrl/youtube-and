@@ -8,7 +8,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -236,19 +236,6 @@
             padding: 24px;
         }
 
-        /* SHORTS GRID */
-        .shorts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
-            padding: 24px;
-        }
-        .shorts-card { cursor: pointer; transition: transform 0.2s; }
-        .shorts-card:hover { transform: scale(1.02); }
-        .shorts-card .thumb { width: 100%; aspect-ratio: 9/16; border-radius: 12px; background: #333; overflow: hidden; }
-        .shorts-card img { width: 100%; height: 100%; object-fit: cover; }
-        .shorts-card .title { font-size: 14px; font-weight: 500; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
         .video-card { display: flex; flex-direction: column; cursor: pointer; margin-bottom: 20px; transition: transform 0.2s; }
         .thumbnail-container {
             width: 100%;
@@ -315,10 +302,8 @@
         }
 
         /* YOUTUBE MUSIC DESIGN SYSTEM */
-        .music-section { padding: 24px; min-height: 100vh; background: linear-gradient(180deg, #1d1d1d 0%, #030303 40%, #030303 100%); }
-        .music-section::-webkit-scrollbar { width: 8px; }
-        .music-section::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        .music-header { margin-bottom: 32px; padding-top: 20px; }
+        .music-section { padding: 24px; min-height: 100vh; background: linear-gradient(180deg, #212121 0%, #0f0f0f 30%); }
+        .music-header { margin-bottom: 32px; }
         .music-header h1 { font-size: 42px; font-weight: 900; letter-spacing: -1px; margin-bottom: 16px; }
         .music-chips { display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; }
         .music-chip { padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
@@ -414,12 +399,6 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                 <a href="#" class="nav-item" id="navHistory">
                     <i class="fa-solid fa-clock-rotate-left"></i><span>Histórico (Curtidos)</span>
                 </a>
-                
-                <div id="subsSection" class="hidden">
-                    <hr style="border:0; border-top:1px solid var(--yt-border); margin:12px 0;">
-                    <h3 style="padding: 0 12px 8px; font-size: 16px; font-weight: 500;">Inscrições</h3>
-                    <div id="sidebarSubsList"></div>
-                </div>
             </nav>
         </aside>
 
@@ -438,32 +417,18 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
 
             <section class="music-section hidden" id="musicSection">
                 <div class="music-header">
-                    <div class="music-chips" id="musicFilterChips">
-                        <button class="music-chip active" onclick="fetchMusicByGenre('Top Hits Brasil 2024', this)">Energia</button>
-                        <button class="music-chip" onclick="fetchMusicByGenre('Relaxing Music Lofi', this)">Relaxar</button>
-                        <button class="music-chip" onclick="fetchMusicByGenre('Deep Focus Work', this)">Foco</button>
-                        <button class="music-chip" onclick="fetchMusicByGenre('Gym Motivation Music', this)">Treino</button>
-                        <button class="music-chip" onclick="fetchMusicByGenre('Chill Vibes', this)">Comutar</button>
+                    <div class="music-chips">
+                        <button class="music-chip active">Energia</button>
+                        <button class="music-chip">Relaxar</button>
+                        <button class="music-chip">Foco</button>
+                        <button class="music-chip">Treino</button>
+                        <button class="music-chip">Comutar</button>
                     </div>
-                    <h1 id="musicMainTitle">Sua Estação de Música</h1>
+                    <h1>Suas Favoritas</h1>
                 </div>
-                
                 <div class="music-shelf">
-                    <div class="music-shelf-title">
-                        <span>Escolhas Rápidas</span>
-                        <span style="font-size: 14px; color: var(--yt-text-secondary); cursor: pointer; font-weight: 500;">TOCAR TUDO</span>
-                    </div>
                     <div class="music-grid-ytm" id="musicGrid">
-                        <!-- Músicas injetadas aqui -->
-                    </div>
-                </div>
-
-                <div class="music-shelf" style="margin-top: 48px;">
-                    <div class="music-shelf-title">
-                        <span>Recomendados para você</span>
-                    </div>
-                    <div class="music-grid-ytm" id="musicGridRecommended">
-                        <!-- Recomendações injetadas aqui -->
+                        <!-- Músicas do YT Music injetadas aqui -->
                     </div>
                 </div>
             </section>
@@ -492,11 +457,9 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
     </div>
 
     <script>
-        // Nota: Substitua esta chave se o erro 400 persistir para utilizadores DESLOGADOS.
-        // Utilizadores LOGADOS usarão o token OAuth2 automaticamente agora.
-        let API_KEY = 'AIzaSyBWXMOGPyH3O5BOAXlWaYf2mgwwoDd1sjc';
+        const API_KEY = 'AIzaSyBWXMOGPyH3O5BOAXlWaYf2mgwwoDd1sjc';
         const CLIENT_ID = '6963743125-6icqrk4m0dpp0oh9ff3rkbpsa87lo03g.apps.googleusercontent.com';
-        const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl';
+        const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly';
 
         // --- SISTEMA DE LOGIN PERSISTENTE INTELIGENTE ---
         let accessToken = localStorage.getItem('yt_access_token');
@@ -587,35 +550,12 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
         }
 
         function loadHome() {
-            // Se estiver logado, mostra os vídeos mais populares do país (Home real)
-            // Caso contrário, usa os tópicos aleatórios
-            if (isTokenValid()) {
-                fetchPopularVideos();
-            } else {
-                fetchVideos(getRandomTopic());
-            }
-        }
-
-        async function fetchPopularVideos() {
-            showView('home');
-            homeGrid.innerHTML = '';
-            loadingIndicator.classList.remove('hidden');
-            try {
-                const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&chart=mostPopular&maxResults=24&regionCode=BR&key=${API_KEY}`);
-                const data = await res.json();
-                loadingIndicator.classList.add('hidden');
-                if (data.items) {
-                    renderGrid(data.items);
-                    renderSuggestions(data.items);
-                }
-            } catch (err) {
-                fetchVideos(getRandomTopic());
-            }
+            fetchVideos(getRandomTopic());
         }
 
         window.onload = () => {
-            initGoogleAuth();
             loadHome();
+            initGoogleAuth();
         };
 
         function initGoogleAuth() {
@@ -638,17 +578,13 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                                 window.pendingAuthAction();
                                 window.pendingAuthAction = null;
                             }
-                            
-                            // Ao logar ou renovar, carrega as inscrições no sidebar
-                            loadSidebarSubscriptions();
                         }
                     },
                 });
 
-                // LOGIN AUTOMÁTICO: Se o token é válido, puxa dados imediatamente
-                if (isTokenValid()) {
-                    if (!userProfile) fetchUserProfile();
-                    loadSidebarSubscriptions();
+                // Se temos token mas não puxamos a foto ainda, faz isso em segundo plano
+                if (isTokenValid() && !userProfile) {
+                    fetchUserProfile();
                 }
 
             } else {
@@ -659,108 +595,32 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
         async function fetchVideos(query) {
             showView('home');
             homeGrid.innerHTML = '';
-            homeGrid.className = query === '#shorts' ? 'shorts-grid' : 'video-grid';
             loadingIndicator.classList.remove('hidden');
 
             try {
-                let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=24&q=${encodeURIComponent(query)}&type=video`;
-                let headers = {};
-
-                // Se estiver logado, usa o token para evitar erro de API Key expirada
-                if (isTokenValid()) {
-                    headers = { 'Authorization': `Bearer ${accessToken}` };
-                } else {
-                    url += `&key=${API_KEY}`;
-                }
-
-                const res = await fetch(url, { headers });
+                const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=24&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`);
                 const data = await res.json();
-                
                 loadingIndicator.classList.add('hidden');
-
-                if (data.error) {
-                    // Se o erro for de chave expirada e não estivermos logados, avisa o user
-                    if (data.error.code === 400 || data.error.code === 403) {
-                        throw new Error("A chave de API expirou. Por favor, faça LOGIN para continuar usando a plataforma sem interrupções.");
-                    }
-                    throw new Error(data.error.message);
-                }
-
-                if (data.items && data.items.length > 0) {
-                    if (query === '#shorts') {
-                        renderShorts(data.items);
-                    } else {
-                        renderGrid(data.items);
-                        renderSuggestions(data.items);
-                    }
-                } else {
-                    homeGrid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px;">
-                        <i class="fa-solid fa-circle-exclamation" style="font-size: 48px; color: var(--yt-text-secondary); margin-bottom: 16px;"></i>
-                        <p>Nenhum resultado encontrado para "${esc(query)}".</p>
-                    </div>`;
+                if (data.items) {
+                    renderGrid(data.items);
+                    renderSuggestions(data.items);
                 }
             } catch (err) {
                 console.error("Erro na busca:", err);
                 loadingIndicator.classList.add('hidden');
-                homeGrid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 40px; color: #ff4e4e;">
-                    <p>Erro na API (400/403): Limite de cota atingido ou Chave inválida.</p>
-                    <small style="color: var(--yt-text-secondary)">${err.message}</small>
-                </div>`;
-            }
-        }
-
-        async function loadSidebarSubscriptions() {
-            const subsContainer = document.getElementById('subsSection');
-            const subsList = document.getElementById('sidebarSubsList');
-            if (!subsContainer || !subsList) return;
-
-            try {
-                const res = await fetchWithAuth(`https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50`);
-                const data = await res.json();
-                
-                if (data.items && data.items.length > 0) {
-                    subsContainer.classList.remove('hidden');
-                    subsList.innerHTML = data.items.map(s => `
-                        <a href="#" class="nav-item" onclick="fetchVideos('${s.snippet.title}')" style="padding: 8px 12px;">
-                            <img src="${s.snippet.thumbnails.default.url}" style="width:24px; height:24px; border-radius:50%; margin-right:20px;">
-                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(s.snippet.title)}</span>
-                        </a>
-                    `).join('');
-                }
-            } catch (err) {
-                console.warn("Não foi possível carregar inscrições laterais.");
             }
         }
 
         async function fetchAuthorizedData(endpoint) {
             showView('home');
             homeGrid.innerHTML = '';
-            homeGrid.className = 'video-grid';
             loadingIndicator.classList.remove('hidden');
 
             try {
-                if (endpoint === 'subscriptions') {
-                    // Primeiro pegamos os IDs dos canais inscritos
-                    const subRes = await fetchWithAuth(`https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=15`);
-                    const subData = await subRes.json();
-                    
-                    if (subData.items && subData.items.length > 0) {
-                        // Para cada canal, pegamos os vídeos mais recentes (simplificado para performance)
-                        const allVideos = [];
-                        for (const channel of subData.items) {
-                            const chanId = channel.snippet.resourceId.channelId;
-                            const vRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${chanId}&maxResults=3&order=date&type=video&key=${API_KEY}`);
-                            const vData = await vRes.json();
-                            if (vData.items) allVideos.push(...vData.items);
-                        }
-                        loadingIndicator.classList.add('hidden');
-                        renderGrid(allVideos.sort(() => Math.random() - 0.5)); // Mistura os vídeos das inscrições
-                        return;
-                    }
-                }
-
                 let url = '';
-                if (endpoint === 'history' || endpoint === 'music') {
+                if (endpoint === 'subscriptions') {
+                    url = `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=20`;
+                } else if (endpoint === 'history' || endpoint === 'music') {
                     // Puxa as curtidas em geral do YouTube
                     url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like&maxResults=50`;
                 }
@@ -793,28 +653,6 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                 console.error("Erro em dados privados:", err); 
                 loadingIndicator.classList.add('hidden');
             }
-        }
-
-        function renderShorts(videos) {
-            homeGrid.innerHTML = videos.map(v => {
-                const vidId = extractVideoId(v);
-                if (!vidId) return '';
-                
-                videoData[vidId] = {
-                    title: v.snippet.title,
-                    channel: v.snippet.channelTitle,
-                    desc: v.snippet.description
-                };
-
-                return `
-                    <div class="shorts-card playable-video" data-vid="${vidId}">
-                        <div class="thumb">
-                            <img src="https://i.ytimg.com/vi/${vidId}/hq720.jpg" onerror="this.src='${v.snippet.thumbnails.high.url}'">
-                        </div>
-                        <div class="title">${esc(v.snippet.title)}</div>
-                    </div>
-                `;
-            }).join('');
         }
 
         function renderGrid(videos) {
@@ -942,8 +780,8 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                 } else if (item.id === 'navSubscriptions') {
                     requireAuth(() => fetchAuthorizedData('subscriptions'));
                 } else if (item.id === 'navMusic') {
-                    showView('music');
-                    fetchMusicByGenre('Pop Hits 2024');
+                    // Chama os dados privados, filtrando apenas as músicas curtidas no seu histórico normal
+                    requireAuth(() => fetchAuthorizedData('music'));
                 } else if (item.id === 'navHistory') {
                     requireAuth(() => fetchAuthorizedData('history'));
                 } else {
@@ -980,54 +818,11 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
             document.body.style.backgroundColor = v === 'music' ? '#030303' : 'var(--yt-bg)';
         }
 
-        async function fetchMusicByGenre(genre, element = null) {
-            if (element) {
-                document.querySelectorAll('.music-chip').forEach(c => c.classList.remove('active'));
-                element.classList.add('active');
-            }
-            
-            const grid = document.getElementById('musicGrid');
-            const recGrid = document.getElementById('musicGridRecommended');
-            if (grid) grid.innerHTML = '<div class="spinner"></div>';
-            if (recGrid) recGrid.innerHTML = '';
-            
-            // Simplificamos a query: Removemos videoCategoryId=10 que causa Erro 400 em chaves restritas
-            const baseQuery = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&type=video&q=`;
-            
-            try {
-                // Chamada principal (Busca normal com sufixos de música para garantir relevância)
-                const res = await fetch(`${baseQuery}${encodeURIComponent(genre + " official music video")}&key=${API_KEY}`);
-                const data = await res.json();
-                
-                if (data.error) throw new Error(data.error.message);
-                
-                if (data.items && data.items.length > 0) {
-                    renderMusicGrid(data.items, 'musicGrid');
-                    
-                    // Mix Recomendado (Gera uma segunda lista baseada na "vibe")
-                    const resRec = await fetch(`${baseQuery}${encodeURIComponent("vibe " + genre)}&key=${API_KEY}&maxResults=6`);
-                    const dataRec = await resRec.json();
-                    if (dataRec.items) renderMusicGrid(dataRec.items, 'musicGridRecommended');
-                } else {
-                    grid.innerHTML = '<p style="color:gray; text-align:center; padding:20px;">Nenhuma música disponível no momento.</p>';
-                }
-            } catch (err) {
-                console.error("Erro na Plataforma Music:", err);
-                if(grid) grid.innerHTML = `<p style="color:#ff4e4e; text-align:center; padding:20px;">Erro de conexão com o YouTube Music (400).<br><small>${err.message}</small></p>`;
-            }
-        }
-
-        function renderMusicGrid(songs, targetId = 'musicGrid') {
-            const container = document.getElementById(targetId);
-            if (!container) return;
-            
-            container.innerHTML = songs.map(s => {
+        function renderMusicGrid(songs) {
+            document.getElementById('musicGrid').innerHTML = songs.map(s => {
                 const vidId = extractVideoId(s);
-                if (!vidId) return '';
+                const thumb = s.snippet.thumbnails?.high?.url || s.snippet.thumbnails?.medium?.url || '';
                 
-                const thumb = s.snippet.thumbnails?.maxres?.url || s.snippet.thumbnails?.high?.url || s.snippet.thumbnails?.medium?.url || '';
-                
-                // Registra os dados para o player global
                 videoData[vidId] = {
                     title: s.snippet.title,
                     channel: s.snippet.channelTitle,
@@ -1035,13 +830,11 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
                 };
 
                 return `
-                    <div class="music-card-ytm playable-video" data-vid="${vidId}" title="${esc(s.snippet.title)}">
+                    <div class="music-card-ytm playable-video" data-vid="${vidId}">
                         <div class="music-thumb-ytm">
-                            <img src="${thumb}" loading="lazy" onerror="this.src='https://i.ytimg.com/vi/${vidId}/hqdefault.jpg'">
+                            <img src="${thumb}" loading="lazy">
                             <div class="music-play-overlay">
-                                <div style="background: rgba(0,0,0,0.6); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fa-solid fa-play" style="font-size: 20px; margin-left: 4px;"></i>
-                                </div>
+                                <i class="fa-solid fa-play"></i>
                             </div>
                         </div>
                         <div class="music-info-ytm">
@@ -1055,8 +848,7 @@ const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCa
 
         function esc(s) {
             if (!s) return "";
-            return s.replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
+            return s.replace(/</g, "&lt;")
                     .replace(/>/g, "&gt;")
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#39;')
